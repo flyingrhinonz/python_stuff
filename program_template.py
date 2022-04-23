@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # vim:set shiftwidth=4 expandtab:
 
+
 '''
 Intro goes here
 ===============
@@ -76,6 +77,7 @@ VersionDate     = '2022-04-24'
 ProgramName     = 'MyProgram'
 AuthorName      = 'Kenneth Aaron'
 AuthorEmail     = 'mymail@example.com'
+License:        = 'GPLv3'
 
 
 # This block handles logging to syslog:
