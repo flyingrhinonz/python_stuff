@@ -67,12 +67,12 @@ SecureLogging = False
     #   You can also supply the dict:  'tee': "text to print"
     #       which saves you writing two lines (one for print and one for logging)
     #       per how you supply the dict (see the examples in the code later on):
-    #   LogWrite.info( { 'tee': 'The same line\ngets printed to display\nand logged.'} )
+    #   LogWrite.info( { 'tee': 'The same line gets printed to display and logged.'} )
     #   LogWrite.info( { 'tee': 'User line to display', 'safe': 'CENSORED line gets logged' } )
 
 
 # Program identification strings:
-__version__     = '1.0.4'
+__version__     = '1.0.5'
 VersionDate     = '2022-04-24'
 ProgramName     = 'MyProgram'
 AuthorName      = 'Kenneth Aaron'
@@ -114,16 +114,24 @@ class CustomHandler(logging.handlers.SysLogHandler):
                 print(record.msg['tee'])
 
             if SecureLogging:
+                # ^ In:  SecureLogging == True  mode - try to log the:  safe  value if found,
+                #       else log the:  tee  value:
                 if 'safe' in record.msg:
                     record.msg = record.msg['safe']
                 else:
                     record.msg = record.msg['tee']
+                    #record.msg = "No safe message was supplied."
+                        # ^ At the moment we are logging the:  tee  value if no:  safe  value is supplied,
+                        #       but a safer option could be to force log a notification string as in the
+                        #       commented out line - you choose which better suits you.
 
-            if not SecureLogging:
-                if 'tee' in record.msg:
-                    record.msg = record.msg['tee']
+            else:
+                # ^ In:  SecureLogging == False  mode - try to log the:  unsafe  value if found,
+                #       else log the:  tee  value:
+                if 'unsafe' in record.msg:
+                    record.msg = record.msg['unsafe']
                 else:
-                    record.msg = record.msg['safe']
+                    record.msg = record.msg['tee']
 
         if EnhancedLogging:
             # ^ We will split the supplied log line (record.msg) into multiple lines.
@@ -322,10 +330,10 @@ def main(*args):
         # ^ Only:  'tee'  supplied - the same line gets printed and logged - regardless
         #       the state of:  SecureLogging  .
 
-    LogWrite.info( { 'tee': 'User line to display', 'safe': 'CENSORED line gets logged' } )
+    LogWrite.info( { 'tee': 'EXPOSED user line to display', 'safe': 'CENSORED line gets logged' } )
         # ^ 'tee'  line always gets printed.
-        #   If:  SecureLogging = False  ->  'tee' line gets logged.
         #   If:  SecureLogging = True   ->  'safe' line gets logged.
+        #   If:  SecureLogging = False  ->  'unsafe'  if present, else  'tee' line gets logged.
 
 
 # Program starter:
