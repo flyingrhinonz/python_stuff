@@ -5,7 +5,7 @@
 Intro goes here
 ===============
 
-Use this as a template for your python 3 programs.
+Use this as a template for your python  3.6+  programs.
 Edit the various fields to customize it to your needs.
 
 Tip - this is also a great place to put the program's user manual for the help page.
@@ -27,12 +27,14 @@ import time
 # Variables that control logging:
 LogLevel = logging.DEBUG
     # ^ Initial log level of this program.
-    #   Edit this if you want to change the initial log level.
+    #       Edit this if you want to change the initial log level.
+    #       Supported levels: DEBUG, INFO, WARNING, ERROR, CRITICAL .
 MaxLogLineLength = 700
     # ^ Wrap log lines longer than this many chars.
     #   Keep a sensible and usable limit.
 SysLogProgName = 'myprog'
-    # ^ This is how our program is identified in syslog
+    # ^ This is how our program is identified in syslog.
+    #       Use:  journalctl -f -t 'myprog'  to watch its logs.
 Indent = 8
     # ^ Wrapped lines are indented by n spaces to make
     #       logging easier to read.
@@ -46,7 +48,7 @@ EnhancedLogging = True
     #       any \n newline marks.
     #   Send log line as-is to syslog (set to False) -
     #       you are responsible for line length constraints.
-SecureLogging = True
+SecureLogging = False
     # ^ LogWrite supports safe logging if called in a particular way.
     #       This allows you to code two versions of your log line and
     #       depending upon this variable - one of the two will be logged.
@@ -60,12 +62,18 @@ SecureLogging = True
     #
     #   If you want simple logging - call LogWrite with a string:
     #       LogWrite.info('This will be logged as is')
+    #
+    #   You can also supply the dict:  'tee': "text to print"
+    #       which saves you writing two lines (one for print and one for logging)
+    #       per how you supply the dict (see the examples in the code later on):
+    #   LogWrite.info( { 'tee': 'The same line\ngets printed to display\nand logged.'} )
+    #   LogWrite.info( { 'tee': 'User line to display', 'safe': 'CENSORED line gets logged' } )
 
 
 # Program identification strings:
-__version__     = '1.0.2'
-VersionDate     = '2021-10-05'
-ProgramName     = 'PROGRAM NAME GOES HERE'
+__version__     = '1.0.4'
+VersionDate     = '2022-04-24'
+ProgramName     = 'MyProgram'
 AuthorName      = 'Kenneth Aaron'
 AuthorEmail     = 'mymail@example.com'
 
@@ -98,11 +106,22 @@ class CustomHandler(logging.handlers.SysLogHandler):
             # ^ LogWrite was called with a dict - log either safe/unsafe
             #       per SecureLogging setting.
 
-            if SecureLogging:
-                record.msg = record.msg['safe']
+            if 'tee' in record.msg:
+                # ^ Dict key == tee means print the message to screen, and later choose
+                #       which version gets logged.
+                print(record.msg['tee'])
 
-            else:
-                record.msg = record.msg['unsafe']
+            if SecureLogging:
+                if 'safe' in record.msg:
+                    record.msg = record.msg['safe']
+                else:
+                    record.msg = record.msg['tee']
+
+            if not SecureLogging:
+                if 'tee' in record.msg:
+                    record.msg = record.msg['tee']
+                else:
+                    record.msg = record.msg['safe']
 
         if EnhancedLogging:
             # ^ We will split the supplied log line (record.msg) into multiple lines.
@@ -259,15 +278,25 @@ def InitialLogging():
         .format(ProgramName, __version__, VersionDate, AuthorName, AuthorEmail))
 
     LogWrite.info(IntroLine)
-    LogWrite.info('Invoked commandline: {CmdLine} , from directory: {Dir} , '
-        'by user: {User} , UID: {UID} , PPID: {PPID} , log level: {LogLevel}'
-        .format(
-            CmdLine = sys.argv,
-            Dir = os.getcwd(),
-            User = getpass.getuser(),
-            UID = os.getuid(),
-            PPID = os.getppid(),
-            LogLevel = LogLevel ) )
+
+    LogWrite.info( {
+        'unsafe': 'Invoked commandline: {CmdLine} , from directory: {Dir} , '
+            'by user: {User} , UID: {UID} , PPID: {PPID} , log level: {LogLevel}'
+                .format(
+                    CmdLine = sys.argv,
+                    Dir = os.getcwd(),
+                    User = getpass.getuser(),
+                    UID = os.getuid(),
+                    PPID = os.getppid(),
+                    LogLevel = LogLevel ),
+        'safe':   'Invoked commandline: CENSORED , from directory: CENSORED , '
+        'by user: CENSORED , UID: CENSORED , PPID: CENSORED , log level: {LogLevel}'
+            .format(LogLevel = LogLevel) } )
+
+
+    LogWrite.info('Fields explained: PN: Process Name , MN: Module Name , '
+        'FN: Function Name , LI: LIne number , '
+        'TN: Thread Name')
 
     if not SecureLogging:
         LogWrite.warning('Attention:  SecureLogging == False  -->  '
@@ -281,10 +310,20 @@ def main(*args):
     LogWrite.info( {
         'safe' :    'This message is CENSORED',
         'unsafe' :  'This message includes sensitive information' } )
+        # ^ Uses the:  SecureLogging  setting.
 
     LogWrite.warning('This is a warning message')
     LogWrite.error('This is an error message')
     LogWrite.critical('This is a critical message')
+
+    LogWrite.info( { 'tee': 'This same line\ngets printed to display\nand logged.'} )
+        # ^ Only:  'tee'  supplied - the same line gets printed and logged - regardless
+        #       the state of:  SecureLogging  .
+
+    LogWrite.info( { 'tee': 'User line to display', 'safe': 'CENSORED line gets logged' } )
+        # ^ 'tee'  line always gets printed.
+        #   If:  SecureLogging = False  ->  'tee' line gets logged.
+        #   If:  SecureLogging = True   ->  'safe' line gets logged.
 
 
 # Program starter:
